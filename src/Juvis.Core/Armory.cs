@@ -30,6 +30,8 @@ public sealed class Armory(LocalStore store, ApiClient api)
         var merged = Backup.Merge(s, incoming);
         s.Gear = merged.Gear; s.Blueprints = merged.Blueprints; s.Vehicles = merged.Vehicles;
         s.CraftPlan = merged.CraftPlan; s.Builds = merged.Builds; s.LastModule = merged.LastModule;
+        s.StorageLocations = merged.StorageLocations; s.Inventory = merged.Inventory;
+        s.TrackedLoadouts = merged.TrackedLoadouts; s.InventoryHistory = merged.InventoryHistory;
     });
     public async Task Cache(Action<Catalog> update, string? sync = null)
     {

@@ -59,6 +59,7 @@ public static class ApiParser
             Tags = e.Get("tags").Strings(), RequiredTags = e.Get("required_tags").Strings(),
             RestrictionsKnown = e.Get("tags").ValueKind == JsonValueKind.Array && e.Get("required_tags").ValueKind == JsonValueKind.Array,
             BuyPrice = e.Get("uex_prices").Get("purchase").Array().Select(p => p.Get("price_buy").Number()).Where(p => p > 0).DefaultIfEmpty(null).Min(),
+            Performance = WeaponPerformance.Parse(e),
             Shops = e.Get("uex_prices").Get("purchase").Array().Select(p => $"{p.S("terminal_name")} · {p.Get("price_buy").Number():N0} aUEC · reported {p.S("date_updated")}").ToList(), Stats = stats,
             Ammunition = new AmmunitionInfo {
                 NotApplicable = ammunitionNotApplicable,
@@ -97,14 +98,14 @@ public static class ApiParser
         var ports = new List<Port>();
         void Visit(JsonElement p, string prefix, int depth)
         {
-            if (depth > 12) return;
+            if (depth > 64) throw new InvalidDataException("Vehicle port nesting exceeds supported depth.");
             var id = prefix + p.S("name");
             Item? installed = p.Get("equipped_item").ValueKind == JsonValueKind.Object ? WikiItem(p.Get("equipped_item")) : null;
             if (installed != null && CatalogPresentation.ItemName(installed) == null) installed = null;
             ports.Add(new Port(id, p.S("name"), p.Get("editable").Bool(), Int(p.Get("sizes").Get("min")), Int(p.Get("sizes").Get("max")),
                 p.Get("compatible_types").Array().Select(t => new PortType(t.S("type"), t.Get("sub_types").Strings())).ToList(),
                 p.Get("required_tags").Strings(), p.Get("port_tags").Strings(), installed, First(p.S("version"), installed?.Version ?? "", version))
-                { DisplayName = p.S("display_name") });
+                { DisplayName = p.S("display_name"), RawType = p.S("type"), Bespoke = p.Get("is_bespoke").Bool() == true || p.Get("bespoke").Bool() == true });
             foreach (var child in p.Get("ports").Array()) Visit(child, id + "/", depth + 1);
         }
         foreach (var p in e.Get("ports").Array()) Visit(p, "", 0);

@@ -25,6 +25,7 @@ public record Item
     public List<string> Shops { get; init; } = [];
     public Dictionary<string, string> Stats { get; init; } = [];
     public AmmunitionInfo Ammunition { get; init; } = new();
+    public WeaponPerformance Performance { get; init; } = new();
     public override string ToString() => Name;
 }
 public record AmmunitionInfo
@@ -62,6 +63,8 @@ public record Port(string Id, string Name, bool? Editable, int? MinSize, int? Ma
     List<PortType> Types, string[] RequiredTags, string[] Tags, Item? Installed, string Version)
 {
     public string DisplayName { get; init; } = "";
+    public string RawType { get; init; } = "";
+    public bool Bespoke { get; init; }
 }
 public record Vehicle(string Id, string Name, string Manufacturer, bool Ground, string ImageUrl, string Version, List<Port> Ports)
 {
@@ -73,6 +76,10 @@ public record GearState(bool Owned = false, bool Need = false, bool Favorite = f
 public record BuildEntry(string PortId, string ItemId, string ItemName, string Version);
 public class UserState
 {
+    public Dictionary<string, StorageLocation> StorageLocations { get; set; } = [];
+    public Dictionary<string, StoredItem> Inventory { get; set; } = [];
+    public Dictionary<string, Dictionary<string, TrackedSlot>> TrackedLoadouts { get; set; } = [];
+    public List<InventoryEvent> InventoryHistory { get; set; } = [];
     public Dictionary<string, GearState> Gear { get; set; } = [];
     public HashSet<string> Blueprints { get; set; } = [];
     public HashSet<string> Vehicles { get; set; } = [];
@@ -80,6 +87,10 @@ public class UserState
     public Dictionary<string, List<BuildEntry>> Builds { get; set; } = [];
     public string LastModule { get; set; } = "Catalog";
 }
+public record StorageLocation(string Id, string Name);
+public record StoredItem(string LocationId, Item Item, int Quantity);
+public record TrackedSlot(Item? Item, bool MountChildrenUnknown = false);
+public record InventoryEvent(string Id, DateTimeOffset At, string Description);
 public class Catalog
 {
     public GuideSnapshot Guide { get; set; } = new("", []);

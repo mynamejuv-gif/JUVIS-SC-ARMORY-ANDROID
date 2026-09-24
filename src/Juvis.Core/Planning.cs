@@ -4,7 +4,7 @@ public static class Compatibility
 {
     public static FitResult Check(Port port, Item item)
     {
-        if (port.Editable == false) return new(Fit.Fixed, "Bespoke / fixed port");
+        if (port.Editable == false || port.Bespoke) return new(Fit.Fixed, "Bespoke / fixed port");
         if (port.Editable is null || port.MinSize is null || port.MaxSize is null || item.Size is null || port.Types.Count == 0)
             return new(Fit.CheckRequired, "Missing port or component restrictions");
         if (item.Size < port.MinSize || item.Size > port.MaxSize) return new(Fit.Incompatible, "Outside allowed size range");

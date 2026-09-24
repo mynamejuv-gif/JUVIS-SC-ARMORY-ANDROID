@@ -1,5 +1,15 @@
 # Release history
 
+## 0.1.8 · 23 September 2026
+
+- Added local inventory with named storage locations, quantities, transfers and recent activity, accessible from More and My Gear.
+- Applying a proposed vehicle build now consumes available parts at the selected location, stores removed equipment there and remembers fitted components. Parts supplied outside tracked inventory require explicit confirmation. Planning alone changes no inventory.
+- Added Weapons, Avionics, Liveries, Propulsion, Utility and Misc. loadout groups, collapsed by default. Fixed/internal/unknown ports are hidden unless Advanced View is enabled.
+- Added ship weapon performance details, horizontally scrollable comparison columns and DPS/range charts. Missing statistics remain unknown; published maximum range is never presented as effective range.
+- Refreshed the bundled ship weapon performance snapshot: 172 records with some performance data, using Wiki version 4.10.0-LIVE.12519617. Existing installations retain their cache and can refresh it normally.
+- Preserved v0.1.7 ammunition search, Gemini, source sync, images, owned/need/favorite states and schema-v1 backup import. Backups now also include inventory locations, quantities and tracked loadouts; repeated imports do not add quantities twice.
+- Same app ID, versionCode 9, development signing certificate compatible with the supplied v0.1.7 APK. 82 core tests pass.
+
 ## 0.1.7 · 15 September 2026
 
 - Added centralized display-name validation and fallback resolution across catalog, gear, crafting, vehicles, stock loadouts, compatible upgrades and search. Unresolved records are hidden while saved IDs and backup data remain untouched.

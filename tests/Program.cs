@@ -2,6 +2,24 @@ using System.Net;
 using System.Text.Json;
 using Juvis.Core;
 
+if (args.Length == 2 && args[0] == "--performance-snapshot")
+{
+    var catalog=JsonSerializer.Deserialize<Catalog>(File.ReadAllText(args[1]),LocalStore.Json)!;
+    var map=catalog.Items.ToDictionary(i=>i.Id);
+    foreach(var name in new[]{"performance-weapons-1.json","performance-weapons-2.json"})
+    {
+        using var doc=JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Fixtures",name)));
+        foreach(var row in doc.RootElement.Get("data").Array()) {var snapshotItem=ApiParser.WikiItem(row);if(CatalogPresentation.ItemName(snapshotItem)!=null)map[snapshotItem.Id]=snapshotItem;}
+    }
+    catalog.Items=map.Values.ToList();
+    using var vehicleDoc=JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Fixtures","loadout-gladius.json")));
+    var vehicle=ApiParser.WikiVehicle(vehicleDoc.RootElement.Get("data"));
+    catalog.Vehicles.RemoveAll(v=>v.Id==vehicle.Id);catalog.Vehicles.Add(vehicle);
+    File.WriteAllText(args[1],JsonSerializer.Serialize(catalog,LocalStore.Json));
+    Console.WriteLine($"Bundled {catalog.Items.Count} items; {catalog.Items.Count(i=>i.Performance.HasData)} with weapon performance.");
+    return;
+}
+
 if (args.Length == 4 && args[0] == "--enrich-weapons")
 {
     var catalog = JsonSerializer.Deserialize<Catalog>(File.ReadAllText(args[1]), LocalStore.Json) ?? throw new InvalidDataException("Starter catalog is empty.");
@@ -195,7 +213,7 @@ Test("Bundled weapon ammunition coverage is complete for applicable records", ()
     Check(weapons.Count == 586 && applicable.Count == 524 && applicable.All(a => a.HasData));
 });
 Test("Bundled vehicle retains a confirmed slot-compatible upgrade", () => {
-    var vehicle = starterCatalog.Vehicles.Single();
+    var vehicle = starterCatalog.Vehicles.Single(v => v.Name == "Cutlass Black");
     var kozane = starterCatalog.Items.Single(i => CatalogPresentation.ItemName(i) == "6MA 'Kozane'");
     var shield = vehicle.Ports.First(p => p.Editable == true && p.Types.Any(t => t.Type == "Shield"));
     Check(Compatibility.Check(shield, kozane).Fit == Fit.Direct);
@@ -340,6 +358,7 @@ Test("Sync all does not start when already cancelled", () => {
     Check(report.Cancelled && report.Updated.Count == 0 && report.Failed.Count == 0);
 });
 
+NewFeatureTests.Run(Test);
 Console.WriteLine($"\n{passed} tests passed.");
 
 sealed class ThreadGuardHandler(int callerThread, bool image) : HttpMessageHandler

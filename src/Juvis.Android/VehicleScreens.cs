@@ -5,6 +5,7 @@ namespace Juvis.AndroidApp;
 public partial class MainActivity
 {
     string vehicleFilter = "All vehicles", goal = "Balanced";
+    bool advancedLoadout;
     void VehiclesScreen()
     {
         Title("Ship & ground upgrades", "Choose a vehicle. Inspect its ports. Save a proposed build.");
@@ -21,6 +22,8 @@ public partial class MainActivity
     }
     void VehicleScreen(Vehicle v, bool proposed = false)
     {
+        var stock = armory.Catalog.Vehicles.FirstOrDefault(x => x.Id == v.Id) ?? v;
+        v = LocalInventory.EffectiveVehicle(armory.State, stock);
         var vehicleName = CatalogPresentation.VehicleName(v);
         if (vehicleName == null) { Draw(); return; }
         Detail(vehicleName, $"{(v.Ground ? "Ground vehicle" : "Ship")} / {CatalogPresentation.Name(v.Manufacturer) ?? "Manufacturer unavailable"}\nLoadout patch: {ApiParser.First(v.Ports.FirstOrDefault()?.Version ?? "", v.Version, "unknown")}", Draw);
@@ -38,13 +41,14 @@ public partial class MainActivity
         body.AddView(Button("✦ Ask Gemini for upgrade suggestions", () => AskGemini(GeminiPrompt.Vehicle(v with { Name = vehicleName }, armory.State.Builds.GetValueOrDefault(v.Id) ?? [], goal)), true));
         body.AddView(Button("Refresh stock loadout / retry", async () => {
             status.Text = "Loading ports and installed components… (20-second timeout)";
-            var loaded = await armory.Api.LoadVehicle(v, lifetime.Token);
+            var loaded = await armory.Api.LoadVehicle(stock, lifetime.Token);
             await armory.RememberVehicle(loaded); if (generation == screenGeneration) { VehicleScreen(loaded, proposed); status.Text = $"{loaded.Ports.Count} ports cached"; }
         }));
         var tabs = Row();
-        tabs.AddView(Button("Stock loadout", () => { VehicleScreen(v); return Task.CompletedTask; }, !proposed), new LinearLayout.LayoutParams(0, Dp(50), 1));
+        tabs.AddView(Button("Current loadout", () => { VehicleScreen(v); return Task.CompletedTask; }, !proposed), new LinearLayout.LayoutParams(0, Dp(50), 1));
         tabs.AddView(Button("Proposed build", () => { VehicleScreen(v, true); return Task.CompletedTask; }, proposed), new LinearLayout.LayoutParams(0, Dp(50), 1));
         body.AddView(tabs);
+        if (armory.State.TrackedLoadouts.ContainsKey(v.Id)) body.AddView(Label("Showing your tracked fitted equipment. API stock refresh preserves these manual changes.", 13, cyan));
         if (proposed)
         {
             var build = armory.State.Builds.GetValueOrDefault(v.Id) ?? [];
@@ -65,35 +69,48 @@ public partial class MainActivity
                 body.AddView(card);
             }
             if (build.Count > visibleBuild.Count) body.AddView(Label($"{build.Count - visibleBuild.Count} saved build entr{(build.Count - visibleBuild.Count == 1 ? "y is" : "ies are")} hidden because no trustworthy display name is available. The saved data remains in exports.", 13, muted));
+            if (build.Count > 0) body.AddView(Button("Apply build & store removed equipment", () => { ApplyBuildScreen(stock); return Task.CompletedTask; }, true));
             body.AddView(Label("Planning only: this does not modify your in-game ship. Refresh data after a patch to recheck saved candidates.", 13, muted));
             return;
         }
         if (v.Ports.Count == 0) body.AddView(Label("No loadout cached yet. Tap Refresh stock loadout. If the request fails, cached data remains available and the same button retries.", 15, muted));
-        var portSearch = new EditText(this) { Hint = "Filter ports: shield, cooler, weapon…", TextSize = 15 };
-        portSearch.SetTextColor(ink); portSearch.SetHintTextColor(muted); portSearch.SetSingleLine(true); portSearch.SetMinHeight(Dp(52));
+        var portSearch = Entry("Filter equipment: shields, nose guns, mining…");
         body.AddView(portSearch);
-        var portCards = new LinearLayout(this) { Orientation = Orientation.Vertical };
-        body.AddView(portCards);
-        void RenderPorts(string text)
+        var advanced = new CheckBox(this) { Text = "Advanced View — all raw ports", Checked = advancedLoadout };
+        advanced.SetTextColor(cyan); advanced.SetMinHeight(Dp(48)); body.AddView(advanced);
+        var portCards = new LinearLayout(this) { Orientation = Orientation.Vertical }; body.AddView(portCards);
+        var expanded = new HashSet<string>();
+        void RenderPorts()
         {
             portCards.RemoveAllViews();
-            var visible = v.Ports.Where(p => (p.Installed != null || p.Editable == true) && Matches(text, CatalogPresentation.PortName(p), p.Installed == null ? "" : CatalogPresentation.ItemName(p.Installed) ?? "", string.Join(" ", p.Types.Select(t => t.Type))))
-                .OrderByDescending(p => p.Editable == true).ThenBy(CatalogPresentation.PortName).ToList();
-            portCards.AddView(Label($"{visible.Count} ports · editable first", 12, muted));
-            foreach (var port in visible.Take(80))
+            var groups = LoadoutPresentation.Group(v.Ports, advancedLoadout);
+            var visible = groups.Values.Sum(g => g.Count);
+            portCards.AddView(Label($"{visible} of {v.Ports.Count} ports · fixed / internal / unknown hidden by default", 12, muted));
+            foreach (var group in groups)
             {
-                var installedName = port.Installed == null ? "Empty port" : CatalogPresentation.ItemName(port.Installed) ?? "Installed component name unavailable";
-                var card = Card(); card.AddView(Label(installedName, 18));
-                card.AddView(Label(CatalogPresentation.PortName(port), 11, muted)); card.AddView(Label($"Allowed S{port.MinSize?.ToString() ?? "?"}–S{port.MaxSize?.ToString() ?? "?"} · " + string.Join(", ", port.Types.Select(t => t.Type)), 12, cyan));
-                if (port.Editable == true) card.AddView(Button("Show compatible upgrades  ›", () => { CompatibleScreen(v, port); return Task.CompletedTask; }));
-                else card.AddView(Label(port.Editable == false ? "Bespoke / fixed" : "Editability unknown", 13, muted));
-                portCards.AddView(card);
+                var rows = group.Value.Where(p => Matches(portSearch.Text ?? "", LoadoutPresentation.ContextName(p), p.Installed == null ? "" : CatalogPresentation.ItemName(p.Installed) ?? "", string.Join(" ", p.Types.Select(t => t.Type)), group.Key)).ToList();
+                if (rows.Count == 0) continue;
+                var section = Card();var content = new LinearLayout(this) { Orientation = Orientation.Vertical };
+                var title = Button((expanded.Contains(group.Key) ? "▾ " : "▸ ") + group.Key.ToUpperInvariant() + $" ({rows.Count})", () => { if (!expanded.Add(group.Key)) expanded.Remove(group.Key); RenderPorts(); return Task.CompletedTask; });
+                section.AddView(title);
+                if (expanded.Contains(group.Key)) foreach (var port in rows)
+                {
+                    var installedName = port.Installed == null ? "Empty / unidentified slot" : CatalogPresentation.ItemName(port.Installed) ?? "Installed name unavailable";
+                    var entry = Card(); entry.AddView(Label(LoadoutPresentation.ContextName(port), 13, cyan)); entry.AddView(Label(installedName, 18));
+                    entry.AddView(Label($"Allowed S{port.MinSize?.ToString() ?? "?"}–S{port.MaxSize?.ToString() ?? "?"} · {LoadoutPresentation.Visibility(port)}", 12, muted));
+                    if (advancedLoadout) entry.AddView(Label($"Raw port: {port.Id}\nType: {port.RawType} · editable: {port.Editable?.ToString() ?? "unknown"}", 11, muted));
+                    if (port.Installed != null) entry.AddView(Button("Installed component details", () => { ItemScreen(LoadoutPresentation.InstalledForComparison(port, armory.Catalog.Items) ?? port.Installed, () => VehicleScreen(stock)); return Task.CompletedTask; }));
+                    if (LoadoutPresentation.Visibility(port) == PortVisibility.Upgradeable) entry.AddView(Button("Show compatible upgrades  ›", () => { CompatibleScreen(v, port); return Task.CompletedTask; }));
+                    content.AddView(entry);
+                }
+                section.AddView(content); portCards.AddView(section);
             }
-            if (visible.Count > 80) portCards.AddView(Label("Showing 80 ports. Filter by name or type to see a specific component.", 13, muted));
         }
-        portSearch.TextChanged += (_, _) => RenderPorts(portSearch.Text ?? "");
-        RenderPorts("");
+        portSearch.TextChanged += (_, _) => RenderPorts();
+        advanced.CheckedChange += (_, e) => { advancedLoadout = e.IsChecked; RenderPorts(); };
+        RenderPorts();
     }
+
     void CompatibleScreen(Vehicle v, Port port)
     {
         var vehicleName = CatalogPresentation.VehicleName(v);
@@ -115,28 +132,10 @@ public partial class MainActivity
             .Where(x => CatalogPresentation.ItemName(x.Item) != null && port.Types.Any(t => t.Type.Equals(x.Item.Type, StringComparison.OrdinalIgnoreCase)) && x.Result.Fit is Fit.Direct or Fit.CheckRequired)
             .OrderBy(x => x.Result.Fit).ThenBy(x => CatalogPresentation.ItemName(x.Item)).ToList();
         if (candidates.Count == 0) body.AddView(Label("No candidate matches in this cache. Sync candidates for this port.", 16));
-        foreach (var (item, fit) in candidates.Take(150))
-        {
-            var itemName = CatalogPresentation.ItemName(item)!;
-            var card = Card(); card.AddView(Label(itemName, 19)); card.AddView(Label($"S{item.Size} · {item.Grade} {item.Class}", 13, muted));
-            card.AddView(Label("Reported buy: " + Price(item.BuyPrice), 12, muted));
-            card.AddView(Label(fit.Fit == Fit.Direct ? "✓ Mount fit confirmed" : "△ Restriction check required", 13, cyan)); card.AddView(Label(fit.Reason, 12, muted));
-            if (port.Installed != null)
-                foreach (var stat in item.Stats) card.AddView(Label($"{stat.Key}: {port.Installed.Stats.GetValueOrDefault(stat.Key, "?")} → {stat.Value}", 12));
-            card.AddView(Button("Details / refresh restrictions", () => { ItemScreen(item, () => CompatibleScreen(v, port)); return Task.CompletedTask; }));
-            bool parentChanged = (armory.State.Builds.GetValueOrDefault(v.Id) ?? []).Any(e => port.Id.StartsWith(e.PortId + "/", StringComparison.Ordinal));
-            if (parentChanged) card.AddView(Label("Parent mount has a proposed replacement. Remove that replacement before planning stock child ports.", 13, cyan));
-            if (fit.Fit == Fit.Direct && !parentChanged) card.AddView(Button("+ Add to proposed build", async () => {
-                if (Compatibility.Check(port, item).Fit != Fit.Direct) throw new InvalidOperationException("Compatibility needs rechecking.");
-                await armory.Change(s => {
-                    if (!s.Builds.TryGetValue(v.Id, out var build)) s.Builds[v.Id] = build = [];
-                    // Changing a mount invalidates any saved children under that mount.
-                    build.RemoveAll(e => e.PortId == port.Id || e.PortId.StartsWith(port.Id + "/", StringComparison.Ordinal));
-                    build.Add(new(port.Id, item.Id, itemName, item.Version));
-                }); VehicleScreen(v, true);
-            }, true));
-            body.AddView(card);
-        }
-        if (candidates.Count > 150) body.AddView(Label("Showing the first 150 candidates. Narrow this port's type/size in the catalog to inspect more."));
+        if (port.Installed?.Type.Equals("WeaponGun", StringComparison.OrdinalIgnoreCase) == true) body.AddView(Button("Refresh installed weapon performance", async () => {
+            var refreshed = await armory.Api.LoadItem(port.Installed, lifetime.Token);
+            await armory.RememberItem(refreshed); if (generation == screenGeneration) CompatibleScreen(v, port);
+        }));
+        ComparisonTable(v, port, candidates.Where(c => c.Item.Id != port.Installed?.Id).ToList());
     }
 }

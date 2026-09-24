@@ -37,6 +37,12 @@ public static class Backup
         var s = b.State;
         if (s is null || s.Gear is null || s.Blueprints is null || s.Vehicles is null || s.CraftPlan is null || s.Builds is null)
             throw new InvalidDataException("Backup is missing required state.");
+        if (s.StorageLocations is null || s.Inventory is null || s.TrackedLoadouts is null || s.InventoryHistory is null ||
+            s.StorageLocations.Any(x=>x.Value is null || x.Key!=x.Value.Id || string.IsNullOrWhiteSpace(x.Key) || CatalogPresentation.Name(x.Value.Name)==null) ||
+            s.Inventory.Any(x=>x.Value is null || x.Value.Item is null || string.IsNullOrWhiteSpace(x.Value.Item.Id) || x.Value.Quantity<0 || x.Value.Quantity>9999 || !s.StorageLocations.ContainsKey(x.Value.LocationId) || x.Key!=LocalInventory.Key(x.Value.LocationId,x.Value.Item.Id)) ||
+            s.TrackedLoadouts.Any(x=>x.Value is null || x.Value.Any(p=>string.IsNullOrWhiteSpace(p.Key)||p.Value is null || (p.Value.Item is not null && string.IsNullOrWhiteSpace(p.Value.Item.Id)))) ||
+            s.InventoryHistory.Any(x=>x is null || string.IsNullOrWhiteSpace(x.Id) || x.Description is null))
+            throw new InvalidDataException("Backup contains invalid inventory or tracked loadouts.");
         if (s.Gear.Count > 100000 || s.CraftPlan.Any(x => x.Value < 1 || x.Value > 999) || s.Gear.Any(x => string.IsNullOrWhiteSpace(x.Key) || x.Value is null)
             || s.Builds.Any(x => x.Value is null || x.Value.Any(e => e is null || string.IsNullOrWhiteSpace(e.PortId) || string.IsNullOrWhiteSpace(e.ItemId))))
             throw new InvalidDataException("Backup contains invalid values.");
@@ -50,6 +56,11 @@ public static class Backup
         result.Vehicles.UnionWith(imported.Vehicles);
         foreach (var (k, v) in imported.CraftPlan) result.CraftPlan[k] = v;
         foreach (var (k, v) in imported.Builds) result.Builds[k] = v;
+        foreach (var (k, v) in imported.StorageLocations) result.StorageLocations[k] = v;
+        // Imported quantities replace matching rows; never sum them on repeated imports.
+        foreach (var (k, v) in imported.Inventory) result.Inventory[k] = v;
+        foreach (var (k, v) in imported.TrackedLoadouts) result.TrackedLoadouts[k] = v;
+        result.InventoryHistory = result.InventoryHistory.Concat(imported.InventoryHistory).DistinctBy(e=>e.Id).OrderBy(e=>e.At).TakeLast(100).ToList();
         result.LastModule = imported.LastModule;
         return result;
     }

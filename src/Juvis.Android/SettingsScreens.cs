@@ -16,6 +16,7 @@ public partial class MainActivity
         Title("Data & tools", "Sync when connected. Keep browsing offline.");
         body.AddView(Button("Commodities", () => { Navigate("Commodities"); return Task.CompletedTask; }));
         body.AddView(Button("Blueprint library", () => { Navigate("Blueprints"); return Task.CompletedTask; }));
+        body.AddView(Button("Local inventory by location", () => { Navigate("Inventory"); return Task.CompletedTask; }, true));
         var card = Card(); card.AddView(Label("Sync sources", 21));
         card.AddView(Label("The bundled starter data includes a weapon and ammunition snapshot refreshed on 15 September 2026. Sync all sources for broader coverage. Images load when viewed; detailed Wiki records and vehicle loadouts refresh on their pages. Failed or cancelled syncs keep the previous cache.", 13, muted));
         var syncAll = Button("Sync all sources", RunSyncAll, true);
@@ -35,13 +36,13 @@ public partial class MainActivity
         token.SetTextColor(ink); token.SetHintTextColor(muted); body.AddView(token);
         body.AddView(Button("Use token for this session", () => { armory.Api.UexToken = token.Text?.Trim() ?? ""; token.Text = ""; status.Text = "UEX token set for this session; excluded from backups."; return Task.CompletedTask; }));
         body.AddView(Label("Backup & restore", 21));
-        body.AddView(Label("Exports gear states, favorites, owned blueprints, craft plan, owned vehicles and proposed builds. Catalogs, images and tokens are excluded. Save outside the app before uninstalling.", 13, muted));
+        body.AddView(Label("Exports gear states, favorites, owned blueprints, craft plan, owned vehicles, proposed builds, location inventory, tracked fitted equipment and inventory history. Catalogs, images and tokens are excluded. Save outside the app before uninstalling.", 13, muted));
         body.AddView(Button("Export backup to a file", () => { ExportBackup(); return Task.CompletedTask; }, true));
         body.AddView(Button("Import & merge backup", () => { ImportBackup(); return Task.CompletedTask; }));
         body.AddView(Label($"{bundledImages.Count:N0} bundled images · always available offline", 16));
         body.AddView(Label($"Downloaded image cache · {images.Bytes / 1048576.0:0.0} MB / 100 MB", 16));
         body.AddView(Button("Clear downloaded images", async () => { await images.Clear(); Draw(); }));
-        body.AddView(Label("JUVIS Android 0.1.7 · Native C#\nCommunity data: UEX and Star Citizen Wiki. Unofficial fan companion; not affiliated with Cloud Imperium Games.\nDesktop backup migration awaits the Windows source/schema.", 12, muted));
+        body.AddView(Label("JUVIS Android 0.1.8 · Native C#\nCommunity data: UEX and Star Citizen Wiki. Unofficial fan companion; not affiliated with Cloud Imperium Games.\nDesktop backup migration awaits the Windows source/schema.", 12, muted));
         body.AddView(Button("UEX data source", () => { OpenUrl("https://uexcorp.space/"); return Task.CompletedTask; }));
         body.AddView(Button("Star Citizen Wiki data source", () => { OpenUrl("https://api.star-citizen.wiki/"); return Task.CompletedTask; }));
     }
@@ -120,7 +121,7 @@ public partial class MainActivity
                 while ((n = await input.ReadAsync(buffer)) > 0) { if (memory.Length + n > Backup.MaxBytes) throw new InvalidDataException("Backup exceeds 8 MB."); memory.Write(buffer, 0, n); }
                 var incoming = Backup.Parse(Encoding.UTF8.GetString(memory.ToArray()));
                 new AlertDialog.Builder(this).SetTitle("Merge this backup?")!
-                    .SetMessage($"{incoming.Gear.Count} gear states, {incoming.Blueprints.Count} blueprints, {incoming.CraftPlan.Count} planned recipes, {incoming.Builds.Count} vehicle builds. Imported values win where the same item exists. A copy of your current state is saved first.")!
+                    .SetMessage($"{incoming.Gear.Count} gear states, {incoming.Blueprints.Count} blueprints, {incoming.CraftPlan.Count} planned recipes, {incoming.Builds.Count} vehicle builds, {incoming.StorageLocations.Count} storage locations and {incoming.Inventory.Count} inventory entries. Imported values win where the same item exists. A copy of your current state is saved first.")!
                     .SetNegativeButton("Cancel", (_, _) => { })!
                     .SetPositiveButton("Import", async (_, _) => {
                         try {

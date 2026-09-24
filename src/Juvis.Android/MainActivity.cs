@@ -78,7 +78,7 @@ public partial class MainActivity : Activity
             if (lifetime.IsCancellationRequested) return;
             ready = true;
             module = savedInstanceState?.GetString("module") ?? armory.State.LastModule;
-            if (!new[] { "Catalog", "Craft", "Vehicles", "My Gear", "More", "Commodities", "Blueprints" }.Contains(module)) module = "Catalog";
+            if (!new[] { "Catalog", "Craft", "Vehicles", "My Gear", "More", "Commodities", "Blueprints", "Inventory" }.Contains(module)) module = "Catalog";
             Draw();
         }
         catch (Exception ex)
@@ -168,6 +168,7 @@ public partial class MainActivity : Activity
             case "Blueprints": BlueprintsScreen(); break;
             case "Commodities": CommoditiesScreen(); break;
             case "Vehicles": VehiclesScreen(); break;
+            case "Inventory": InventoryScreen(); break;
             default: MoreScreen(); break;
         }
     }

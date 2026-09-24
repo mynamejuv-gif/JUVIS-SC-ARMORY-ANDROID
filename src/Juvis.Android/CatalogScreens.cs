@@ -11,6 +11,7 @@ public partial class MainActivity
         Title(gear ? "My Gear" : "Explore the armory", gear ? "Your owned, needed and favorite equipment." : "Find equipment. Plan your next loadout.");
         if (gear)
         {
+            body.AddView(Button("Local inventory by location", () => { Navigate("Inventory"); return Task.CompletedTask; }, true));
             body.AddView(Button("Export backup", () => { ExportBackup(); return Task.CompletedTask; }));
             body.AddView(Button("Import backup", () => { ImportBackup(); return Task.CompletedTask; }));
         }
@@ -75,6 +76,8 @@ public partial class MainActivity
         card.AddView(Label("Reported buy price: " + Price(i.BuyPrice), 15, cyan));
         foreach (var shop in i.Shops) card.AddView(Label(shop, 12, muted));
         body.AddView(card);
+        PerformanceCard(i);
+        body.AddView(Button("Add to local inventory", () => { AddToInventory(i, () => ItemScreen(i, returnTo)); return Task.CompletedTask; }));
         if (WeaponPresentation.IsWeapon(i))
         {
             var ammo = WeaponPresentation.Ammunition(i, armory.Catalog.Items);

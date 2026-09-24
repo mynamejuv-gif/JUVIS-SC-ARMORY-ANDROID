@@ -8,7 +8,7 @@ A native Android companion for Star Citizen, written in C# with .NET for Android
 
 This is a starter implementation of the described Windows workflows. The original Windows source was unavailable, so complete desktop feature parity has not been established.
 
-Public prerelease: [Download v0.1.6](https://github.com/mynamejuv-gif/JUVIS-SC-ARMORY/releases/tag/v0.1.6). The local 0.1.7 source and packages add ammunition data and global name-quality handling; they are not automatically published.
+This source edition is **v0.1.8**. See the [0.1.8 update guide](docs/UPDATE-0.1.8.md) for local inventory, grouped loadouts and weapon comparisons. These local packages are not automatically published to GitHub.
 
 Validation: see the [0.1.3 category audit](docs/CATEGORY-AUDIT-0.1.3.md) for tested coverage, fixes and remaining data gaps.
 
@@ -23,6 +23,10 @@ Validation: see the [0.1.3 category audit](docs/CATEGORY-AUDIT-0.1.3.md) for tes
 - Commodities, blueprints and crafting hub.
 - My Gear states and backup import/export.
 - Vehicle loadouts and proposed upgrades.
+- Collapsible loadout categories with Advanced View for raw ports.
+- Ship weapon performance columns and DPS/range charts from published Wiki data.
+- Local equipment quantities by city, station or outpost; transfers between locations.
+- Apply a proposed build at a selected location, consume available parts and store removed components.
 - Gemini deep-link buttons for suggestions.
 - UEX and Star Citizen Wiki synchronization.
 - Mobile navigation and dark styling inspired by the Windows app.
@@ -31,13 +35,13 @@ Validation: see the [0.1.3 category audit](docs/CATEGORY-AUDIT-0.1.3.md) for tes
 
 ## Install on Android
 
-Open [Releases](https://github.com/mynamejuv-gif/JUVIS-SC-ARMORY/releases) and choose a signed APK from the available release assets. Use the full-images APK for bundled offline pictures, or the lightweight APK for a smaller download. Transfer it to your phone, open it in Files, allow installation from that app if prompted, then tap Install. Export your JUVIS backup before uninstalling an existing version. AAB files and source ZIPs are not directly installable.
+Open [Releases](https://github.com/mynamejuv-gif/JUVIS-SC-ARMORY/releases) and choose a signed APK from the available release assets. For v0.1.8, use the **lightweight update APK** (about 43 MiB) if the large download fails to install; the full-images APK includes 3,730 bundled offline pictures. Transfer the APK to your phone, open it in Files, allow installation from that app if prompted, then tap Install. Export your JUVIS backup before updating. Do not uninstall first. AAB files and source ZIPs are not directly installable.
 
 Read the [illustrated user guide](docs/USER-GUIDE.md) for the first-run walkthrough and everyday tasks.
 
 ## Images
 
-This repository is the lightweight source edition. It includes a partial starter dataset and an empty bundled-image index. Images can download and cache when online. The full-image edition includes 3,730 images (about 736 MiB uncompressed); keep that pack and installable packages as separate release downloads, outside ordinary Git history.
+The complete v0.1.8 source ZIP includes the partial starter dataset and **3,730 images** in `BundledData/Images`. They are included by the build script by default. Images can also download and cache when online. Keep the large image pack and installable packages as release downloads, outside ordinary Git history. A lightweight checkout may contain only an empty image index.
 
 To include your original image ZIP, run from the repository folder:
 
@@ -47,6 +51,14 @@ dotnet run --project tools/Juvis.ImagePack -- "C:\path\BundledData (2).zip" .loc
 ```
 
 Use an empty output folder for the importer. It preserves image bytes and creates the required index. Set `ANDROID_HOME` and `JAVA_HOME`, or pass the SDK/JDK arguments below. If you already have the full source edition, pass its `BundledData` folder directly with `-ImagePackDirectory`. Do not replace the repository's empty index with a populated index without supplying its images.
+
+To build the lightweight update from the complete source ZIP, make a separate empty image pack and pass it to the build script. This keeps the full source image pack intact:
+
+```powershell
+New-Item -ItemType Directory -Force .local-empty-images | Out-Null
+[IO.File]::WriteAllText((Join-Path (Get-Location) '.local-empty-images/image-index.json'), '{}')
+./Build-Android.ps1 -Configuration Release -ImagePackDirectory .local-empty-images
+```
 
 ## Build on Windows
 
@@ -78,12 +90,12 @@ Follow [the upload guide](docs/GITHUB-SETUP.md). The included GitHub Actions wor
 | --- | --- |
 | `src/Juvis.Core` | Models, parsers, storage, synchronization and planning |
 | `src/Juvis.Android` | Native Android screens and resources |
-| `tests` | 61 executable core tests and fixtures |
+| `tests` | 82 executable core tests and fixtures |
 | `tools/Juvis.ImagePack` | Local image-pack importer |
-| `BundledData` | Empty default image index |
+| `BundledData` | Image index and offline images in the full source edition |
 | `docs` | Architecture, verification, device checklist and screenshots |
 
-The previous full-image edition was tested on an Android 16 emulator. Historical verification is recorded in [VERIFICATION.md](docs/VERIFICATION.md); [FULL-IMAGE-EDITION.md](docs/FULL-IMAGE-EDITION.md) describes that package, while [RELEASE-0.1.7.md](docs/RELEASE-0.1.7.md) records the current build and its untested device limits. Vehicle recommendations depend on available API data and are not a ship-performance simulator.
+Historical verification is recorded in [VERIFICATION.md](docs/VERIFICATION.md). The [0.1.8 release notes](docs/RELEASE-0.1.8.md) describe this update and its testing limits. Vehicle recommendations depend on available API data and are not a ship-performance simulator.
 
 This is an unofficial fan companion. Star Citizen content and images belong to their respective owners. Data sources include UEX and Star Citizen Wiki. No third-party image ownership or license is granted by this repository.
 
