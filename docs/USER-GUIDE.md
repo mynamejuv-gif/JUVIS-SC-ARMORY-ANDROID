@@ -127,11 +127,10 @@ Craft-plan quantities continue to use Wiki recipes. Source downloads are cached 
 2. Tap **Loadout & upgrades**.
 3. Optionally tap **Mark vehicle owned** so it appears under **My vehicles**.
 4. Tap **Refresh stock loadout / retry** to download ports and installed components. A request has a 20-second timeout; use the same button to retry if it fails.
-5. On **Stock loadout**, filter ports with a term such as `shield`, `cooler` or `weapon`.
-6. For an editable port, tap **Show compatible upgrades**.
-7. If needed, tap **Sync candidates for this port / retry**.
-8. Review candidates. Only those marked **Mount fit confirmed** can be added using **+ Add to proposed build**.
-9. Open **Proposed build** to inspect saved replacements or remove them.
+5. On **Current loadout**, expand a category and optionally filter ports with a term such as `shield`, `cooler` or `weapon`.
+6. Each editable slot shows **Stock / fitted** beside **Upgrade**. Tap **Select compatible**, search the confirmed matches, and tap one to save it to the proposed build. Choose **Keep stock** to remove a proposal for that slot.
+7. Tap **Compare upgrades / sync more candidates** for detailed statistics or if no confirmed match is cached. Use **Sync candidates for this port / retry** when needed. Entries requiring a restriction check remain on the comparison screen and cannot be selected as confirmed upgrades.
+8. Open **Proposed build** to inspect saved replacements, remove them, or apply the build at a selected local storage location.
 
 **Restriction check required** means available data is insufficient to confirm a fit. Use **Details / refresh restrictions** and refresh the stock loadout as needed. Fixed ports cannot be edited. A confirmed mount fit does not guarantee better performance.
 

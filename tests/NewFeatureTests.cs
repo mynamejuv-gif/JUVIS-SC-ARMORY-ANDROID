@@ -22,6 +22,11 @@ static class NewFeatureTests
         var next=old with{Id="new",Name="New Shield"};
         var port=new Port("shield","shield",true,1,1,[new("Shield",[])],[],[],old,"patch");
         var ship=new Vehicle("ship","Test ship","",false,"","patch",[port]);
+        test("Inline upgrade choices contain only confirmed compatible components",()=>{
+            var options=Compatibility.ConfirmedUpgrades(port,[old,next,next with{Id="large",Size=2},next with{Id="wrong",Type="Cooler"},next with{Id="stale",Version="other"},next with{Id="unknown",RestrictionsKnown=false},next with{Id="bad",Name="<= PLACEHOLDER =>"}]);
+            Check(options.Count==1&&options[0].Id==next.Id);
+            Check(Compatibility.ConfirmedUpgrades(port with{Editable=false},[next]).Count==0);
+        });
         UserState State(){var s=new UserState();s.StorageLocations["A"]=new("A","Area18");s.StorageLocations["B"]=new("B","Orison");s.Builds[ship.Id]=[new(port.Id,next.Id,next.Name,next.Version)];return s;}
         test("Location add is case-insensitive and inventory quantities stay separate",()=>{var s=State();Check(LocalInventory.AddLocation(s," area18 ")=="A");LocalInventory.Adjust(s,"A",old,3);LocalInventory.Adjust(s,"B",old,1);Check(s.Inventory[LocalInventory.Key("A",old.Id)].Quantity==3&&s.Inventory[LocalInventory.Key("B",old.Id)].Quantity==1);});
         test("Move conserves total quantity and rejects overdraft",()=>{var s=State();LocalInventory.Adjust(s,"A",old,3);LocalInventory.Move(s,"A","B",old,2);Check(s.Inventory.Values.Sum(x=>x.Quantity)==3);var before=Backup.Export(s);Reject(()=>LocalInventory.Move(s,"A","B",old,2));Check(s.Inventory[LocalInventory.Key("A",old.Id)].Quantity==1);});

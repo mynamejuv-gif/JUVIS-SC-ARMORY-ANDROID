@@ -102,7 +102,7 @@ public partial class MainActivity
     {
         view.SetPadding(Dp(8),Dp(8),Dp(8),Dp(8));row.AddView(view,new LinearLayout.LayoutParams(Dp(width),-2));
     }
-    async Task SaveCandidate(Vehicle vehicle,Port port,Item item)
+    async Task SaveCandidate(Vehicle vehicle,Port port,Item item,bool showProposed=true)
     {
         if(LoadoutPresentation.Visibility(port)!=PortVisibility.Upgradeable||Compatibility.Check(port,item).Fit!=Fit.Direct)throw new InvalidOperationException("Compatibility needs rechecking.");
         await armory.Change(s=>{
@@ -110,7 +110,7 @@ public partial class MainActivity
             if(!s.Builds.TryGetValue(vehicle.Id,out var build))s.Builds[vehicle.Id]=build=[];
             build.RemoveAll(e=>e.PortId==port.Id||e.PortId.StartsWith(port.Id+"/",StringComparison.Ordinal));
             build.Add(new(port.Id,item.Id,CatalogPresentation.ItemName(item)!,item.Version));
-        });VehicleScreen(vehicle,true);
+        });VehicleScreen(vehicle,showProposed);
     }
 }
 sealed class PerformanceBar(global::Android.Content.Context context,decimal? value,decimal max,Color color):View(context)

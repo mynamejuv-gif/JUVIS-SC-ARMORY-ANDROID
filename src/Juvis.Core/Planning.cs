@@ -2,6 +2,16 @@ namespace Juvis.Core;
 
 public static class Compatibility
 {
+    public static List<Item> ConfirmedUpgrades(Port port, IEnumerable<Item> items)
+    {
+        if (LoadoutPresentation.Visibility(port) != PortVisibility.Upgradeable) return [];
+        return items.Where(item => !string.IsNullOrWhiteSpace(item.Id) && item.Id != port.Installed?.Id && CatalogPresentation.ItemName(item) != null &&
+                port.Types.Any(type => Eq(type.Type, item.Type)) && Check(port, item).Fit == Fit.Direct)
+            .GroupBy(item => item.Id)
+            .Select(group => group.First())
+            .OrderBy(item => CatalogPresentation.ItemName(item), StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
     public static FitResult Check(Port port, Item item)
     {
         if (port.Editable == false || port.Bespoke) return new(Fit.Fixed, "Bespoke / fixed port");

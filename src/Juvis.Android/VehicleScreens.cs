@@ -6,6 +6,7 @@ public partial class MainActivity
 {
     string vehicleFilter = "All vehicles", goal = "Balanced";
     bool advancedLoadout;
+    readonly HashSet<string> expandedLoadoutGroups = [];
     void VehiclesScreen()
     {
         Title("Ship & ground upgrades", "Choose a vehicle. Inspect its ports. Save a proposed build.");
@@ -52,7 +53,7 @@ public partial class MainActivity
         if (proposed)
         {
             var build = armory.State.Builds.GetValueOrDefault(v.Id) ?? [];
-            if (build.Count == 0) body.AddView(Label("Open a stock port, choose a compatible candidate, then add it to your build.", 15, muted));
+            if (build.Count == 0) body.AddView(Label("Open a loadout category and choose an upgrade beside the stock component.", 15, muted));
             var visibleBuild = build.Where(entry => CatalogPresentation.Name(armory.Catalog.Items.FirstOrDefault(i => i.Id == entry.ItemId) is { } cached ? CatalogPresentation.ItemName(cached) : null, entry.ItemName) != null).ToList();
             foreach (var entry in visibleBuild)
             {
@@ -79,7 +80,8 @@ public partial class MainActivity
         var advanced = new CheckBox(this) { Text = "Advanced View — all raw ports", Checked = advancedLoadout };
         advanced.SetTextColor(cyan); advanced.SetMinHeight(Dp(48)); body.AddView(advanced);
         var portCards = new LinearLayout(this) { Orientation = Orientation.Vertical }; body.AddView(portCards);
-        var expanded = new HashSet<string>();
+        var expanded = expandedLoadoutGroups;
+        var itemsByType = armory.Catalog.Items.ToLookup(item => item.Type, StringComparer.OrdinalIgnoreCase);
         void RenderPorts()
         {
             portCards.RemoveAllViews();
@@ -96,11 +98,31 @@ public partial class MainActivity
                 if (expanded.Contains(group.Key)) foreach (var port in rows)
                 {
                     var installedName = port.Installed == null ? "Empty / unidentified slot" : CatalogPresentation.ItemName(port.Installed) ?? "Installed name unavailable";
-                    var entry = Card(); entry.AddView(Label(LoadoutPresentation.ContextName(port), 13, cyan)); entry.AddView(Label(installedName, 18));
+                    var entry = Card(); entry.AddView(Label(LoadoutPresentation.ContextName(port), 13, cyan));
+                    var columns = Row();
+                    var stockColumn = new LinearLayout(this) { Orientation = Orientation.Vertical };
+                    stockColumn.AddView(Label("STOCK / FITTED", 11, muted)); stockColumn.AddView(Label(installedName, 16));
+                    columns.AddView(stockColumn, new LinearLayout.LayoutParams(0, -2, 1) { RightMargin = Dp(8) });
+                    var upgradeColumn = new LinearLayout(this) { Orientation = Orientation.Vertical };
+                    upgradeColumn.AddView(Label("UPGRADE", 11, cyan));
+                    if (LoadoutPresentation.Visibility(port) == PortVisibility.Upgradeable)
+                    {
+                        var candidates = Compatibility.ConfirmedUpgrades(port, port.Types.SelectMany(type => itemsByType[type.Type]));
+                        var planned = armory.State.Builds.GetValueOrDefault(v.Id)?.FirstOrDefault(change => change.PortId == port.Id);
+                        var plannedItem = planned == null ? null : armory.Catalog.Items.FirstOrDefault(item => item.Id == planned.ItemId);
+                        var plannedName = CatalogPresentation.Name(plannedItem == null ? null : CatalogPresentation.ItemName(plannedItem), planned?.ItemName);
+                        upgradeColumn.AddView(Button(plannedName == null ? $"Select compatible ({candidates.Count})  ▾" : plannedName + "  ▾", () => {
+                            ShowUpgradePicker(v, port, candidates);
+                            return Task.CompletedTask;
+                        }, plannedName != null));
+                    }
+                    else upgradeColumn.AddView(Label("Fixed / review in Advanced View", 12, muted));
+                    columns.AddView(upgradeColumn, new LinearLayout.LayoutParams(0, -2, 1));
+                    entry.AddView(columns);
                     entry.AddView(Label($"Allowed S{port.MinSize?.ToString() ?? "?"}–S{port.MaxSize?.ToString() ?? "?"} · {LoadoutPresentation.Visibility(port)}", 12, muted));
                     if (advancedLoadout) entry.AddView(Label($"Raw port: {port.Id}\nType: {port.RawType} · editable: {port.Editable?.ToString() ?? "unknown"}", 11, muted));
                     if (port.Installed != null) entry.AddView(Button("Installed component details", () => { ItemScreen(LoadoutPresentation.InstalledForComparison(port, armory.Catalog.Items) ?? port.Installed, () => VehicleScreen(stock)); return Task.CompletedTask; }));
-                    if (LoadoutPresentation.Visibility(port) == PortVisibility.Upgradeable) entry.AddView(Button("Show compatible upgrades  ›", () => { CompatibleScreen(v, port); return Task.CompletedTask; }));
+                    if (LoadoutPresentation.Visibility(port) == PortVisibility.Upgradeable) entry.AddView(Button("Compare upgrades / sync more candidates  ›", () => { CompatibleScreen(v, port); return Task.CompletedTask; }));
                     content.AddView(entry);
                 }
                 section.AddView(content); portCards.AddView(section);
@@ -109,6 +131,62 @@ public partial class MainActivity
         portSearch.TextChanged += (_, _) => RenderPorts();
         advanced.CheckedChange += (_, e) => { advancedLoadout = e.IsChecked; RenderPorts(); };
         RenderPorts();
+    }
+
+    void ShowUpgradePicker(Vehicle vehicle, Port port, List<Item> candidates)
+    {
+        if (candidates.Count == 0)
+        {
+            CompatibleScreen(vehicle, port);
+            status.Text = "No confirmed matches cached. Sync candidates for this port, then choose an upgrade.";
+            return;
+        }
+        var layout = new LinearLayout(this) { Orientation = Orientation.Vertical };
+        layout.SetPadding(Dp(16), Dp(4), Dp(16), Dp(8));
+        var search = new EditText(this) { Hint = "Search compatible upgrades", TextSize = 16 };
+        search.SetSingleLine(true); search.SetTextColor(ink); search.SetHintTextColor(muted);
+        layout.AddView(search, new LinearLayout.LayoutParams(-1, Dp(52)));
+        var list = new ListView(this);
+        layout.AddView(list, new LinearLayout.LayoutParams(-1, Dp(360)));
+        var filtered = new List<Item>(candidates);
+        void RenderChoices()
+        {
+            filtered = candidates.Where(item => Matches(search.Text ?? "", CatalogPresentation.ItemName(item)!, item.Manufacturer, item.Type, item.SubType)).ToList();
+            var options = new[] { "Keep stock / remove proposed upgrade" }
+                .Concat(filtered.Select(item => $"{CatalogPresentation.ItemName(item)} · S{item.Size}"))
+                .ToArray();
+            list.Adapter = new ArrayAdapter<string>(this, global::Android.Resource.Layout.SimpleListItem1, options);
+        }
+        search.TextChanged += (_, _) => RenderChoices();
+        RenderChoices();
+        var dialog = new global::Android.App.AlertDialog.Builder(this)
+            .SetTitle(LoadoutPresentation.ContextName(port))!
+            .SetView(layout)!
+            .SetNegativeButton("Cancel", (_, _) => { })!
+            .Create() ?? throw new InvalidOperationException("Could not open upgrade choices.");
+        list.ItemClick += (_, args) => {
+            var selected = args.Position == 0 ? null : filtered[args.Position - 1];
+            dialog.Dismiss();
+            _ = Select(selected);
+        };
+        dialog.Show();
+
+        async Task Select(Item? selected)
+        {
+            try
+            {
+                if (selected == null)
+                {
+                    await armory.Change(state => {
+                        if (state.Builds.TryGetValue(vehicle.Id, out var build))
+                            build.RemoveAll(change => change.PortId == port.Id);
+                    });
+                    VehicleScreen(vehicle);
+                }
+                else await SaveCandidate(vehicle, port, selected, false);
+            }
+            catch (Exception ex) { Error(ex); }
+        }
     }
 
     void CompatibleScreen(Vehicle v, Port port)

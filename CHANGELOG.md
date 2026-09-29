@@ -1,5 +1,10 @@
 # Release history
 
+## Unreleased
+
+- Show the fitted component beside an inline upgrade selector in each editable vehicle slot. Search the selector to choose only confirmed compatible items, or keep the fitted component to remove a proposal.
+- Keep the detailed comparison and per-port candidate sync available below each slot. Proposed selections still use the existing saved-build and local-inventory workflow.
+
 ## 0.1.8 · 23 September 2026
 
 - Added local inventory with named storage locations, quantities, transfers and recent activity, accessible from More and My Gear.
