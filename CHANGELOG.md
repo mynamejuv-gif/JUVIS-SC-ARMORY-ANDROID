@@ -1,10 +1,15 @@
 # Release history
 
+## 0.1.9-beta.2 · 29 September 2026
+
+- Corrected a packaging failure in beta.1 that made Android crash before the app screen opened. Beta packages now use a clean rebuild; beta.2 has versionCode 11 so it updates the affected install without deleting personal data.
+- Reproduced the beta.1 crash in an emulator, then verified beta.2 launches after a full APK install and displays the JUVIS navigation.
+
 ## 0.1.9-beta.1 · 29 September 2026
 
 - Show the fitted component beside an inline upgrade selector in each editable vehicle slot. Search the selector to choose only confirmed compatible items, or keep the fitted component to remove a proposal. After selection, the stock-versus-upgrade comparison appears directly below that slot.
 - Keep the detailed comparison and per-port candidate sync available below each slot. Proposed selections still use the existing saved-build and local-inventory workflow.
-- Test build: same app ID and signing certificate as the published 0.1.8 lightweight APK, with versionCode 10. Android build succeeds; device interaction remains to be checked by beta testers.
+- Superseded test build: same app ID and signing certificate as the published 0.1.8 lightweight APK, with versionCode 10. Its APK crashes at launch and should be replaced with beta.2.
 
 ## 0.1.8 · 23 September 2026
 

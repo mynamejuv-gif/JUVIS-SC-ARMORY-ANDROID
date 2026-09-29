@@ -1,9 +1,9 @@
 # Test the inline vehicle upgrade selector
 
-This is the **0.1.9-beta.1** test build. The published 0.1.8 release remains the stable download.
+This is the **0.1.9-beta.2** test build. It replaces beta.1, which crashed at launch. The published 0.1.8 release remains the stable download.
 
 1. In JUVIS, open **More → Export backup** and save a copy of your personal data.
-2. On your Android device, open the [0.1.9-beta.1 prerelease](https://github.com/mynamejuv-gif/JUVIS-SC-ARMORY-ANDROID/releases/tag/v0.1.9-beta.1) and download the **lightweight beta APK** under Assets. Open it in Files/Downloads and choose **Update**. Do not uninstall the existing app first.
+2. On your Android device, open the [0.1.9-beta.2 prerelease](https://github.com/mynamejuv-gif/JUVIS-SC-ARMORY-ANDROID/releases/tag/v0.1.9-beta.2) and download the **lightweight beta APK** under Assets. Open it in Files/Downloads and choose **Update**. Do not uninstall the existing app first, including if beta.1 currently crashes.
 3. Open **Vehicles**, choose a ship, and refresh its stock loadout if needed. Expand a loadout category.
 4. Check that each editable slot shows **Stock / fitted** on the left and **Upgrade** on the right. Tap the upgrade control, search, and choose a compatible component.
 5. Confirm that the stock-versus-selected comparison appears directly below that slot. Try another component; the comparison should update. Choose **Keep stock**; the comparison should disappear.
