@@ -8,7 +8,7 @@ A native Android companion for Star Citizen, written in C# with .NET for Android
 
 This is a starter implementation of the described Windows workflows. The original Windows source was unavailable, so complete desktop feature parity has not been established.
 
-This source edition is **v0.1.8**. See the [0.1.8 update guide](docs/UPDATE-0.1.8.md) for local inventory, grouped loadouts and weapon comparisons. These local packages are not automatically published to GitHub.
+This review branch builds **v0.1.9-beta.1**, with an inline vehicle upgrade selector and comparison. See the [beta test guide](docs/BETA-0.1.9.md) and the [0.1.8 update guide](docs/UPDATE-0.1.8.md) for earlier features.
 
 Validation: see the [0.1.3 category audit](docs/CATEGORY-AUDIT-0.1.3.md) for tested coverage, fixes and remaining data gaps.
 

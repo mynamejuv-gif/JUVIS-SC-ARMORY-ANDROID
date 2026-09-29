@@ -1,9 +1,10 @@
 # Release history
 
-## Unreleased
+## 0.1.9-beta.1 · 29 September 2026
 
 - Show the fitted component beside an inline upgrade selector in each editable vehicle slot. Search the selector to choose only confirmed compatible items, or keep the fitted component to remove a proposal. After selection, the stock-versus-upgrade comparison appears directly below that slot.
 - Keep the detailed comparison and per-port candidate sync available below each slot. Proposed selections still use the existing saved-build and local-inventory workflow.
+- Test build: same app ID and signing certificate as the published 0.1.8 lightweight APK, with versionCode 10. Android build succeeds; device interaction remains to be checked by beta testers.
 
 ## 0.1.8 · 23 September 2026
 
