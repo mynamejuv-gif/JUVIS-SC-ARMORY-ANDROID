@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Show the fitted component beside an inline upgrade selector in each editable vehicle slot. Search the selector to choose only confirmed compatible items, or keep the fitted component to remove a proposal.
+- Show the fitted component beside an inline upgrade selector in each editable vehicle slot. Search the selector to choose only confirmed compatible items, or keep the fitted component to remove a proposal. After selection, the stock-versus-upgrade comparison appears directly below that slot.
 - Keep the detailed comparison and per-port candidate sync available below each slot. Proposed selections still use the existing saved-build and local-inventory workflow.
 
 ## 0.1.8 · 23 September 2026

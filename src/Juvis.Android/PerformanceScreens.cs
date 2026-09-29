@@ -22,6 +22,55 @@ public partial class MainActivity
     static (string Name,decimal? Value,string Unit)[] PerformanceFields(WeaponPerformance p) => [
         ("Burst DPS",p.BurstDps,""),("Sustained DPS (60 s)",p.SustainedDps,""),("Alpha / shot",p.Alpha,""),
         ("Effective range",p.EffectiveRange," m"),("Maximum range",p.MaximumRange," m"),("Projectile velocity",p.Velocity," m/s"),("Fire rate",p.Rpm," rpm")];
+    void InlineUpgradeComparison(LinearLayout entry, Port port, Item? selected)
+    {
+        var comparison = new LinearLayout(this) { Orientation = Orientation.Vertical };
+        comparison.SetBackgroundColor(Color.ParseColor("#12323F"));
+        comparison.SetPadding(Dp(10), Dp(8), Dp(10), Dp(8));
+        comparison.AddView(Label("STOCK / FITTED  →  SELECTED UPGRADE", 12, cyan));
+        if (selected == null || CatalogPresentation.ItemName(selected) == null)
+        {
+            comparison.AddView(Label("The saved upgrade is not in the current cache. Sync candidates before applying this build.", 13, muted));
+            entry.AddView(comparison);
+            return;
+        }
+        var fit = Compatibility.Check(port, selected);
+        comparison.AddView(Label(fit.Fit == Fit.Direct ? "✓ Confirmed mount fit · proposed build" : $"△ Recheck required: {fit.Reason}", 12, fit.Fit == Fit.Direct ? cyan : muted));
+        var current = LoadoutPresentation.InstalledForComparison(port, armory.Catalog.Items);
+        if (current != null && current.Version != port.Version) current = current with { Performance = new() };
+        void Pair(string name, string? before, string? after)
+        {
+            if (before == null && after == null) return;
+            comparison.AddView(Label($"{name}: {before ?? "—"}  →  {after ?? "—"}", 13));
+        }
+        Pair("Size", current?.Size?.ToString(), selected.Size?.ToString());
+        Pair("Type", current == null ? null : CatalogPresentation.Name(current.Type), CatalogPresentation.Name(selected.Type));
+        Pair("Grade", current == null ? null : CatalogPresentation.Name(current.Grade), CatalogPresentation.Name(selected.Grade));
+        Pair("Class", current == null ? null : CatalogPresentation.Name(current.Class), CatalogPresentation.Name(selected.Class));
+        if (port.Types.Any(type => type.Type.Equals("WeaponGun", StringComparison.OrdinalIgnoreCase)))
+        {
+            var left = current?.Performance ?? new WeaponPerformance();
+            var right = selected.Performance;
+            var leftFields = PerformanceFields(left);
+            var rightFields = PerformanceFields(right);
+            var shown = 0;
+            for (var index = 0; index < rightFields.Length; index++)
+            {
+                var before = leftFields[index].Value;
+                var after = rightFields[index].Value;
+                if (before == null && after == null) continue;
+                Pair(rightFields[index].Name, before == null ? null : WeaponPerformance.Value(before, rightFields[index].Unit),
+                    after == null ? null : WeaponPerformance.Value(after, rightFields[index].Unit));
+                shown++;
+            }
+            if (shown == 0) comparison.AddView(Label("Weapon performance data unavailable; open comparison to refresh details.", 12, muted));
+            Pair("Damage", CatalogPresentation.Name(left.DamageType), CatalogPresentation.Name(right.DamageType));
+            if (left.CapacitorShots != null || right.CapacitorShots != null || left.AmmoCapacity != null || right.AmmoCapacity != null)
+                Pair("Ammo / energy", current == null ? null : left.AmmoEnergy.Replace('\n', ' '), right.AmmoEnergy.Replace('\n', ' '));
+        }
+        comparison.AddView(Label($"Data version: fitted {ApiParser.First(current?.Version ?? "", "unknown")} · upgrade {ApiParser.First(selected.Version, "unknown")}. Unknown values are shown as —.", 11, muted));
+        entry.AddView(comparison);
+    }
     void ComparisonTable(Vehicle vehicle,Port port,List<(Item Item,FitResult Result)> candidates)
     {
         var current=LoadoutPresentation.InstalledForComparison(port,armory.Catalog.Items);

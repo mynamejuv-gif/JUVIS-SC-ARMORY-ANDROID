@@ -105,11 +105,11 @@ public partial class MainActivity
                     columns.AddView(stockColumn, new LinearLayout.LayoutParams(0, -2, 1) { RightMargin = Dp(8) });
                     var upgradeColumn = new LinearLayout(this) { Orientation = Orientation.Vertical };
                     upgradeColumn.AddView(Label("UPGRADE", 11, cyan));
+                    var planned = armory.State.Builds.GetValueOrDefault(v.Id)?.FirstOrDefault(change => change.PortId == port.Id);
+                    var plannedItem = planned == null ? null : armory.Catalog.Items.FirstOrDefault(item => item.Id == planned.ItemId);
                     if (LoadoutPresentation.Visibility(port) == PortVisibility.Upgradeable)
                     {
                         var candidates = Compatibility.ConfirmedUpgrades(port, port.Types.SelectMany(type => itemsByType[type.Type]));
-                        var planned = armory.State.Builds.GetValueOrDefault(v.Id)?.FirstOrDefault(change => change.PortId == port.Id);
-                        var plannedItem = planned == null ? null : armory.Catalog.Items.FirstOrDefault(item => item.Id == planned.ItemId);
                         var plannedName = CatalogPresentation.Name(plannedItem == null ? null : CatalogPresentation.ItemName(plannedItem), planned?.ItemName);
                         upgradeColumn.AddView(Button(plannedName == null ? $"Select compatible ({candidates.Count})  ▾" : plannedName + "  ▾", () => {
                             ShowUpgradePicker(v, port, candidates);
@@ -119,10 +119,11 @@ public partial class MainActivity
                     else upgradeColumn.AddView(Label("Fixed / review in Advanced View", 12, muted));
                     columns.AddView(upgradeColumn, new LinearLayout.LayoutParams(0, -2, 1));
                     entry.AddView(columns);
+                    if (planned != null) InlineUpgradeComparison(entry, port, plannedItem);
                     entry.AddView(Label($"Allowed S{port.MinSize?.ToString() ?? "?"}–S{port.MaxSize?.ToString() ?? "?"} · {LoadoutPresentation.Visibility(port)}", 12, muted));
                     if (advancedLoadout) entry.AddView(Label($"Raw port: {port.Id}\nType: {port.RawType} · editable: {port.Editable?.ToString() ?? "unknown"}", 11, muted));
                     if (port.Installed != null) entry.AddView(Button("Installed component details", () => { ItemScreen(LoadoutPresentation.InstalledForComparison(port, armory.Catalog.Items) ?? port.Installed, () => VehicleScreen(stock)); return Task.CompletedTask; }));
-                    if (LoadoutPresentation.Visibility(port) == PortVisibility.Upgradeable) entry.AddView(Button("Compare upgrades / sync more candidates  ›", () => { CompatibleScreen(v, port); return Task.CompletedTask; }));
+                    if (LoadoutPresentation.Visibility(port) == PortVisibility.Upgradeable) entry.AddView(Button("Detailed comparison / sync candidates  ›", () => { CompatibleScreen(v, port); return Task.CompletedTask; }));
                     content.AddView(entry);
                 }
                 section.AddView(content); portCards.AddView(section);
@@ -175,6 +176,7 @@ public partial class MainActivity
         {
             try
             {
+                var previousScroll = scroll.ScrollY;
                 if (selected == null)
                 {
                     await armory.Change(state => {
@@ -184,6 +186,7 @@ public partial class MainActivity
                     VehicleScreen(vehicle);
                 }
                 else await SaveCandidate(vehicle, port, selected, false);
+                scroll.Post(() => scroll.ScrollTo(0, previousScroll));
             }
             catch (Exception ex) { Error(ex); }
         }
