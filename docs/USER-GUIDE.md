@@ -1,6 +1,6 @@
 # JUVIS SC ARMORY — Using the Android app
 
-For Android version 0.1.8. This guide explains everyday use after installation. See the [illustrated 0.1.8 update guide](UPDATE-0.1.8.md) for local inventory, applying upgrades, grouped loadouts and weapon comparison columns.
+For Android version 0.1.8 and the current development branch. The inline upgrade selector described below is under review and is not in the published 0.1.8 APK. See the [illustrated 0.1.8 update guide](UPDATE-0.1.8.md) for local inventory, applying upgrades, grouped loadouts and weapon comparison columns.
 
 ![JUVIS star-and-laurel app icon](screenshots/juvis-icon.png)
 
