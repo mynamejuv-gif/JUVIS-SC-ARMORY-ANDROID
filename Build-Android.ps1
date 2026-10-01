@@ -33,7 +33,7 @@ if ($InstallDependencies) {
     Run-Dotnet -Arguments @('build',$project,'-t:InstallAndroidDependencies','-f','net10.0-android',"-p:AndroidSdkDirectory=$AndroidSdkDirectory", "-p:JavaSdkDirectory=$JavaSdkDirectory",'-p:AcceptAndroidSDKLicenses=True')
 }
 Run-Dotnet -Arguments @('run','--project',(Join-Path $PSScriptRoot 'tests/Juvis.Core.Tests.csproj'),'-c','Release')
-$buildArgs = @('build',$project,'-c',$Configuration,"-p:AndroidPackageFormats=$Format",'-p:PublishTrimmed=false','-p:RunAOTCompilation=false',"-p:ImagePackDirectory=$ImagePackDirectory")
+$buildArgs = @('build',$project,'-t:Rebuild','-v:minimal','-c',$Configuration,"-p:AndroidPackageFormats=$Format",'-p:PublishTrimmed=false','-p:RunAOTCompilation=false',"-p:ImagePackDirectory=$ImagePackDirectory")
 if ($AndroidSdkDirectory) { $buildArgs += "-p:AndroidSdkDirectory=$AndroidSdkDirectory" }
 if ($JavaSdkDirectory) { $buildArgs += "-p:JavaSdkDirectory=$JavaSdkDirectory" }
 Run-Dotnet -Arguments $buildArgs

@@ -41,5 +41,35 @@ static class NewFeatureTests
             using var http=new HttpClient();var app=new Armory(new LocalStore(dir),new ApiClient(http));app.Initialize(()=>Task.FromResult(new Catalog())).GetAwaiter().GetResult();app.Import(s).GetAwaiter().GetResult();
             var reopened=new Armory(new LocalStore(dir),new ApiClient(http));reopened.Initialize(()=>Task.FromResult(new Catalog())).GetAwaiter().GetResult();Check(reopened.State.Inventory[LocalInventory.Key("A",old.Id)].Quantity==1&&reopened.State.TrackedLoadouts.Count==1);
         });
+        test("Patch validity separates LIVE, PTU and stale data",()=>{
+            Check(ZeroHero.Validity("4.10.1-LIVE.12660092")==PatchValidity.Live);
+            Check(ZeroHero.Validity("4.10.2 PTU") == PatchValidity.Ptu);
+            Check(ZeroHero.Validity("4.10.0-LIVE") == PatchValidity.Outdated && ZeroHero.Validity("") == PatchValidity.Outdated);
+        });
+        test("Active craft and contract requirements become priority keep",()=>{
+            var ingredient=new Ingredient("pressurized-ice-game-id","Pressurized Ice",1.5m,"SCU");
+            var blueprint=new Blueprint("recipe","Test recipe","4.10.1 LIVE",10,true,[ingredient],[],"");
+            var s=new UserState { CraftPlan=new(){{"recipe",2}}, ZeroHero=new(){ContractNeeds=new(){{"recycled-material-composite",3}}} };
+            var plan=ZeroHero.ResourcePlan(new Catalog{Blueprints=[blueprint]},s);
+            var ice=plan.Single(x=>x.Name=="Pressurized Ice");var rmc=plan.Single(x=>x.Name=="Recycled Material Composite");
+            Check(ice.Needed==3&&ice.Disposition==ResourceDisposition.PriorityKeep&&rmc.Needed==3&&rmc.Disposition==ResourceDisposition.PriorityKeep);
+        });
+        test("New wipe run clears only Zero Hero progress",()=>{
+            var s=State();s.Gear["tool"]=new(true);s.Blueprints.Add("recipe");s.Vehicles.Add(ship.Id);
+            s.ZeroHero.CompletedSteps.Add("stabilize");s.ZeroHero.ResourceInventory["ice"]=4;s.ZeroHero.ContractNeeds["ice"]=2;s.ZeroHero.RebuildQueue.Add(ship.Id);
+            var run=s.ZeroHero.RunNumber;ZeroHero.NewRun(s,new DateTimeOffset(2026,10,1,0,0,0,TimeSpan.Zero));
+            Check(s.ZeroHero.RunNumber==run+1&&s.ZeroHero.CompletedSteps.Count==0&&s.ZeroHero.ResourceInventory.Count==0&&s.ZeroHero.ContractNeeds.Count==0&&s.ZeroHero.RebuildQueue.Count==0);
+            Check(s.Gear["tool"].Owned&&s.Blueprints.Contains("recipe")&&s.Vehicles.Contains(ship.Id)&&s.Builds[ship.Id].Count==1&&s.StorageLocations.Count==2);
+        });
+        test("Zero Hero state survives backup and merge",()=>{
+            var s=State();s.ZeroHero.ResourceInventory["pressurized-ice"]=2.5m;s.ZeroHero.ResourceChoices["pressurized-ice"]=ResourceDisposition.PriorityKeep;s.ZeroHero.CompletedSteps.Add("stabilize");
+            var restored=Backup.Parse(Backup.Export(s));Check(restored.ZeroHero.ResourceInventory["pressurized-ice"]==2.5m&&restored.ZeroHero.CompletedSteps.Contains("stabilize"));
+            var merged=Backup.Merge(new UserState(),restored);Check(merged.ZeroHero.ResourceChoices["pressurized-ice"]==ResourceDisposition.PriorityKeep);
+        });
+        test("Older backup merge preserves current Zero Hero run",()=>{
+            var current=new UserState();current.ZeroHero.RunNumber=4;current.ZeroHero.ResourceInventory["pressurized-ice"]=7;
+            var old=Backup.Parse("""{"Format":"juvis-android","SchemaVersion":1,"State":{"Gear":{},"Blueprints":[],"Vehicles":[],"CraftPlan":{},"Builds":{}}}""");
+            var merged=Backup.Merge(current,old);Check(merged.ZeroHero.RunNumber==4&&merged.ZeroHero.ResourceInventory["pressurized-ice"]==7);
+        });
     }
 }

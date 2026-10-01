@@ -78,7 +78,7 @@ public partial class MainActivity : Activity
             if (lifetime.IsCancellationRequested) return;
             ready = true;
             module = savedInstanceState?.GetString("module") ?? armory.State.LastModule;
-            if (!new[] { "Catalog", "Craft", "Vehicles", "My Gear", "More", "Commodities", "Blueprints", "Inventory" }.Contains(module)) module = "Catalog";
+            if (!new[] { "Catalog", "ZeroHero", "Craft", "Vehicles", "My Gear", "More", "Commodities", "Blueprints", "Inventory" }.Contains(module)) module = "Catalog";
             Draw();
         }
         catch (Exception ex)
@@ -154,15 +154,16 @@ public partial class MainActivity : Activity
         scroll.ScrollTo(0, 0);
         if (!busy) status.Text = $"{armory.Catalog.Items.Count:N0} items cached  ·  " + (armory.Catalog.Synced.Count == 0 ? "Starter snapshot · sync in More" : "Offline ready · timestamps in More");
         nav.RemoveAllViews();
-        foreach (var target in new[] { "Catalog", "Craft", "Vehicles", "My Gear", "More" })
+        foreach (var destination in new[] { (Target: "Catalog", Label: "Catalog"), (Target: "ZeroHero", Label: "0 → Hero"), (Target: "Craft", Label: "Craft"), (Target: "Vehicles", Label: "Vehicles"), (Target: "My Gear", Label: "My Gear"), (Target: "More", Label: "More") })
         {
-            var b = Button(target, () => { Navigate(target); return Task.CompletedTask; }, module == target);
-            b.TextSize = 10; b.SetPadding(Dp(2), 0, Dp(2), 0);
+            var b = Button(destination.Label, () => { Navigate(destination.Target); return Task.CompletedTask; }, module == destination.Target);
+            b.TextSize = 9; b.SetPadding(Dp(1), 0, Dp(1), 0);
             nav.AddView(b, new LinearLayout.LayoutParams(0, Dp(52), 1) { LeftMargin = Dp(2), RightMargin = Dp(2) });
         }
         switch (module)
         {
             case "Catalog": CatalogScreen(); break;
+            case "ZeroHero": ZeroHeroScreen(); break;
             case "My Gear": CatalogScreen(true); break;
             case "Craft": CraftScreen(); break;
             case "Blueprints": BlueprintsScreen(); break;
