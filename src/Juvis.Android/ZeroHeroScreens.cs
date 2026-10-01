@@ -9,6 +9,13 @@ public partial class MainActivity
 
     void ZeroHeroScreen()
     {
+        // Zero Hero refreshes itself after tab changes and saved progress. Replace
+        // the current page instead of appending the refreshed controls below it.
+        screenGeneration++;
+        body.RemoveAllViews();
+        back = null;
+        scroll.ScrollTo(0, 0);
+
         Title("ZERO → HERO", $"Post-wipe run {armory.State.ZeroHero.RunNumber} · started {armory.State.ZeroHero.StartedUtc.ToLocalTime():d MMM yyyy}");
         var patch = Card();
         patch.AddView(Label($"LIVE {ZeroHero.LivePatch}", 18, cyan));
@@ -98,26 +105,38 @@ public partial class MainActivity
         body.AddView(Label("Run decision", 14, cyan));
         Choice(body, ["PRIORITY KEEP", "KEEP", "SELL"], row.Disposition switch { ResourceDisposition.PriorityKeep => "PRIORITY KEEP", ResourceDisposition.Keep => "KEEP", _ => "SELL" }, choice => {
             var disposition = choice switch { "PRIORITY KEEP" => ResourceDisposition.PriorityKeep, "KEEP" => ResourceDisposition.Keep, _ => ResourceDisposition.Sell };
-            _ = SaveResourceChoice(row.Id, disposition, row);
+            _ = SaveResourceChoiceSafely(row.Id, disposition, row);
         });
     }
 
-    async Task SaveResourceChoice(string id, ResourceDisposition disposition, ResourcePlanRow row)
+    async Task SaveResourceChoiceSafely(string id, ResourceDisposition disposition, ResourcePlanRow row)
     {
-        await armory.Change(s => s.ZeroHero.ResourceChoices[id] = disposition);
-        if (!IsDestroyed) ZeroHeroResourceScreen(row);
+        try
+        {
+            await armory.Change(s => s.ZeroHero.ResourceChoices[id] = disposition);
+            if (!IsDestroyed) ZeroHeroResourceScreen(row);
+        }
+        catch (Exception ex)
+        {
+            Error(ex);
+        }
     }
 
     void ZeroHeroContracts()
     {
         body.AddView(Label("CONTRACT REQUIREMENTS", 18));
         body.AddView(Label("Track the exact material and quantity shown in your accepted contract. Requirements can change by contract and patch, so the app does not invent a number.", 13, muted));
+        var plan = ZeroHero.ResourcePlan(armory.Catalog, armory.State);
         var current = armory.State.ZeroHero.ContractNeeds.OrderBy(x => x.Key).ToList();
         foreach (var requirement in current)
         {
-            var row = ZeroHero.ResourcePlan(armory.Catalog, armory.State).First(r => r.Id == requirement.Key);
-            var card = Card(); card.AddView(Label(row.Name, 18));
-            card.AddView(Label($"Required {requirement.Value:0.###} · Owned {row.Owned:0.###} · Missing {row.Missing:0.###}", 14, row.Missing > 0 ? cyan : muted));
+            var row = plan.FirstOrDefault(r => r.Id.Equals(requirement.Key, StringComparison.OrdinalIgnoreCase))
+                ?? plan.FirstOrDefault(r => ZeroHero.Key("", r.Name).Equals(requirement.Key, StringComparison.OrdinalIgnoreCase));
+            var card = Card();
+            var owned = row?.Owned ?? armory.State.ZeroHero.ResourceInventory.GetValueOrDefault(requirement.Key);
+            var missing = Math.Max(0, requirement.Value - owned);
+            card.AddView(Label(row?.Name ?? requirement.Key.Replace('-', ' '), 18));
+            card.AddView(Label($"Required {requirement.Value:0.###} · Owned {owned:0.###} · Missing {missing:0.###}", 14, missing > 0 ? cyan : muted));
             card.AddView(Button("Remove requirement", async () => { await armory.Change(s => s.ZeroHero.ContractNeeds.Remove(requirement.Key)); ZeroHeroScreen(); }));
             body.AddView(card);
         }
@@ -128,7 +147,9 @@ public partial class MainActivity
             var display = name.Text?.Trim() ?? "";
             if (!CatalogPresentation.HasName(display)) throw new InvalidOperationException("Enter the resource name exactly as shown by the contract.");
             if (!decimal.TryParse(amount.Text, out var value) || value <= 0 || value > 1000000) throw new InvalidOperationException("Enter a quantity above 0 and no more than 1,000,000.");
-            var key = ZeroHero.Key("", display);
+            var key = ZeroHero.ResourcePlan(armory.Catalog, armory.State)
+                .FirstOrDefault(r => r.Name.Equals(display, StringComparison.OrdinalIgnoreCase))?.Id
+                ?? ZeroHero.Key("", display);
             await armory.Change(s => s.ZeroHero.ContractNeeds[key] = value);
             ZeroHeroScreen();
         }, true));
