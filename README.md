@@ -8,7 +8,7 @@ A native Android companion for Star Citizen, written in C# with .NET for Android
 
 This is a starter implementation of the described Windows workflows. The original Windows source was unavailable, so complete desktop feature parity has not been established.
 
-This source edition is **v0.1.8**. See the [0.1.8 update guide](docs/UPDATE-0.1.8.md) for local inventory, grouped loadouts and weapon comparisons. These local packages are not automatically published to GitHub.
+This source edition is **v0.2.0-beta.1**. It adds the ZERO → HERO post-wipe module while preserving the v0.1.8 catalog, inventory, crafting and vehicle systems. See the [beta release notes](docs/RELEASE-0.2.0-beta.1.md). These local packages are not automatically published to GitHub.
 
 Validation: see the [0.1.3 category audit](docs/CATEGORY-AUDIT-0.1.3.md) for tested coverage, fixes and remaining data gaps.
 

@@ -12,7 +12,7 @@ public sealed class ApiClient(HttpClient http)
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeout.CancelAfter(TimeSpan.FromSeconds(30));
         using var request = new HttpRequestMessage(HttpMethod.Get, StarterGuide.DataUrl);
-        request.Headers.UserAgent.ParseAdd("JuvisAndroid/0.1.5");
+        request.Headers.UserAgent.ParseAdd("JuvisAndroid/0.2.0-beta.1");
         using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode) throw new HttpRequestException($"Citizen Starter Guide: HTTP {(int)response.StatusCode}. Previous guide data retained.");
         using var doc = JsonDocument.Parse(await ReadBounded(response.Content, 16 * 1024 * 1024, timeout.Token).ConfigureAwait(false));
@@ -29,7 +29,7 @@ public sealed class ApiClient(HttpClient http)
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeout.CancelAfter(TimeSpan.FromSeconds(20));
         using var request = new HttpRequestMessage(HttpMethod.Get, uri);
-        request.Headers.UserAgent.ParseAdd("JuvisAndroid/0.1.8 (+https://api.star-citizen.wiki)");
+        request.Headers.UserAgent.ParseAdd("JuvisAndroid/0.2.0-beta.1 (+https://api.star-citizen.wiki)");
         if (uri.Host == "api.uexcorp.uk" && !string.IsNullOrWhiteSpace(UexToken)) request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", UexToken);
         request.Headers.Add("X-Client-Version", "0.1.0");
         using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token).ConfigureAwait(false);

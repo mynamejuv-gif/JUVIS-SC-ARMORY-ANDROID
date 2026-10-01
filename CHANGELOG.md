@@ -1,5 +1,16 @@
 # Release history
 
+## 0.2.0-beta.1 · 1 October 2026
+
+- Added ZERO → HERO as a first-class navigation section with a seven-stage post-wipe roadmap.
+- Added a run-scoped resource ledger with KEEP, SELL and PRIORITY KEEP decisions, contract requirements, blueprint-derived totals, owned quantities and missing calculations.
+- Added mining, salvage and base-building preparation checklists with explicit LIVE 4.10.1, PTU 4.10.2 and OUTDATED / VERIFY labels.
+- Connected the module to existing blueprint craft plans, owned vehicles, proposed builds and tracked fitted loadouts rather than duplicating those systems.
+- Added a New Wipe Run action that resets only ZERO → HERO progress. Catalog knowledge, normal inventory, gear, blueprints, vehicles and saved builds remain intact.
+- Preserved schema-v1 backup compatibility while adding ZERO → HERO progress to new exports and merges.
+- Preserved package ID `app.juvis.scarmory`; versionCode is 12. Release builds now force a clean Android `Rebuild` to avoid stale native bridge packaging.
+- 87 core tests pass, including reset isolation, legacy-backup migration, backup round trips, patch validity and missing-resource calculations.
+
 ## 0.1.8 · 23 September 2026
 
 - Added local inventory with named storage locations, quantities, transfers and recent activity, accessible from More and My Gear.

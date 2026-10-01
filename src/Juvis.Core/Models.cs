@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 namespace Juvis.Core;
 
 public record Item
@@ -85,6 +86,8 @@ public class UserState
     public HashSet<string> Vehicles { get; set; } = [];
     public Dictionary<string, int> CraftPlan { get; set; } = [];
     public Dictionary<string, List<BuildEntry>> Builds { get; set; } = [];
+    public ZeroHeroRunState ZeroHero { get; set; } = new();
+    [JsonIgnore] public bool HasZeroHeroData { get; set; }
     public string LastModule { get; set; } = "Catalog";
 }
 public record StorageLocation(string Id, string Name);
